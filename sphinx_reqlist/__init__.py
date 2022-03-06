@@ -1,8 +1,18 @@
 from docutils import nodes
 from docutils.nodes import Node
+from docutils.parsers.rst import Directive
 from typing import Sequence, cast, List, Dict
 from sphinx.util.docutils import SphinxDirective
 from sphinx import addnodes
+
+
+class req_list(nodes.General, nodes.Element):
+    pass
+
+
+class ReqListDirective(Directive):
+    def run(self):
+        return [req_list('')]
 
 
 class ReqDirective(SphinxDirective):
@@ -48,8 +58,23 @@ class ReqDirective(SphinxDirective):
         return attributes
 
 
+def process_req_list_nodes(app, doctree, fromdocname):
+    if not hasattr(app.builder.env, 'req_all_reqs'):
+        return
+    for node in doctree.traverse(req_list):
+        result_list = nodes.bullet_list()
+        for req_info in app.builder.env.req_all_reqs:
+            item = nodes.list_item()
+            item += nodes.paragraph(text=req_info["title"])
+            result_list += item
+        node.replace_self(result_list)
+
+
 def setup(app):
     app.add_directive('req', ReqDirective)
+    app.add_directive('req_list', ReqListDirective)
+    app.add_node(req_list)
+    app.connect('doctree-resolved', process_req_list_nodes)
     return {
         'version': '0.1',
         'parallel_read_safe': True,
