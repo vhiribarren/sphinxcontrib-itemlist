@@ -15,6 +15,15 @@ class ReqListDirective(Directive):
         return [req_list('')]
 
 
+class req_table(nodes.General, nodes.Element):
+    pass
+
+
+class ReqTableDirective(Directive):
+    def run(self):
+        return [req_table('')]
+
+
 class ReqDirective(SphinxDirective):
     has_content = True
     required_arguments = 1
@@ -70,11 +79,34 @@ def process_req_list_nodes(app, doctree, fromdocname):
         node.replace_self(result_list)
 
 
+def process_req_table_nodes(app, doctree, fromdocname):
+    if not hasattr(app.builder.env, 'req_all_reqs'):
+        return
+    for node in doctree.traverse(req_table):
+        result_table = nodes.table()
+        tgroup = nodes.tgroup()
+        tbody = nodes.tbody()
+        colspec = nodes.colspec(colwidth=100)
+        tgroup += colspec
+        tgroup += tbody
+        result_table += tgroup
+        for req_info in app.builder.env.req_all_reqs:
+            row = nodes.row()
+            entry = nodes.entry()
+            entry += nodes.paragraph(text=req_info["title"])
+            row += entry
+            tbody += row
+        node.replace_self(result_table)
+
+
 def setup(app):
     app.add_directive('req', ReqDirective)
     app.add_directive('req_list', ReqListDirective)
+    app.add_directive('req_table', ReqTableDirective)
     app.add_node(req_list)
+    app.add_node(req_table)
     app.connect('doctree-resolved', process_req_list_nodes)
+    app.connect('doctree-resolved', process_req_table_nodes)
     return {
         'version': '0.1',
         'parallel_read_safe': True,

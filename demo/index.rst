@@ -3,6 +3,7 @@ Demo
 
 .. req_list::
 
+.. req_table::
 
 .. req:: This is a short requirement
 
