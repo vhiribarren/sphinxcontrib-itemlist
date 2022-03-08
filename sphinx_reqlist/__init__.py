@@ -119,12 +119,22 @@ def process_req_table_nodes(app, doctree, fromdocname):
         headers = node["req_table_options"]["headers"]
         result_table = nodes.table()
         tgroup = nodes.tgroup()
+        thead = nodes.thead()
+        thead_row = nodes.row()
+        thead += thead_row
         tbody = nodes.tbody()
         title_colspec = nodes.colspec(colwidth=2)
         tgroup += title_colspec
-        for _ in headers:
+        entry_title = nodes.entry()
+        entry_title += nodes.paragraph(text="Title")
+        thead_row += entry_title
+        for header in headers:
             colspec = nodes.colspec(colwidth=1)
             tgroup += colspec
+            entry = nodes.entry()
+            entry += nodes.paragraph(text=header)
+            thead_row += entry
+        tgroup += thead
         tgroup += tbody
         result_table += tgroup
         for req_info in app.builder.env.req_all_reqs:
