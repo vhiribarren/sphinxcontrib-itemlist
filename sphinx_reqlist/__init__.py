@@ -72,6 +72,7 @@ class ReqDirective(SphinxDirective):
         req_desc_content = addnodes.desc_content()
         self.state.nested_parse(self.content, self.content_offset, req_desc_content)
         req_desc = addnodes.desc()
+        req_desc['classes'].append('describe')
         req_desc += req_desc_signature
         req_desc += req_desc_content
 
