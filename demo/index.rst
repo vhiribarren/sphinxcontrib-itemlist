@@ -4,12 +4,14 @@ Demo
 .. req_list::
 
 .. req_table::
+    :headers: Important, Reference
 
 .. req:: This is a short requirement
 
     This is a short description.
 
-    :Reference: Maybe an ID of the rule
+    :Reference: ID12345
+    :Important: yes
     :Rational:
         A long rational to explain why we need that.
 
@@ -18,7 +20,8 @@ Demo
 
     This is a short description.
 
-    :Reference: Maybe an ID of the rule
+    :Reference: ID42034
+    :Important: no
     :Rational:
         A long rational to explain why we need that.
 
@@ -27,6 +30,7 @@ Demo
 
     This is a short description.
 
-    :Reference: Maybe an ID of the rule
+    :Reference: ID944345
+    :Important: yes
     :Rational:
         A long rational to explain why we need that.

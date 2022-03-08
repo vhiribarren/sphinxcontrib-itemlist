@@ -1,6 +1,6 @@
 from docutils import nodes
 from docutils.nodes import Node
-from docutils.parsers.rst import Directive
+from docutils.parsers.rst import Directive, directives
 from typing import Sequence, cast, List, Dict
 from sphinx.util.docutils import SphinxDirective
 from sphinx import addnodes
@@ -20,8 +20,17 @@ class req_table(nodes.General, nodes.Element):
 
 
 class ReqTableDirective(Directive):
+    has_content = True
+    option_spec = {
+        'headers': directives.unchanged_required,
+    }
+
     def run(self):
-        return [req_table('')]
+        headers = []
+        if "headers" in self.options:
+            headers = [ h.strip() for h in self.options.get('headers').split(',')]
+        options = {"headers": headers}
+        return [req_table(req_table_options=options)]
 
 
 class ReqDirective(SphinxDirective):
@@ -82,12 +91,17 @@ def process_req_list_nodes(app, doctree, fromdocname):
 def process_req_table_nodes(app, doctree, fromdocname):
     if not hasattr(app.builder.env, 'req_all_reqs'):
         return
+
     for node in doctree.traverse(req_table):
+        headers = node["req_table_options"]["headers"]
         result_table = nodes.table()
         tgroup = nodes.tgroup()
         tbody = nodes.tbody()
-        colspec = nodes.colspec(colwidth=100)
-        tgroup += colspec
+        title_colspec = nodes.colspec(colwidth=2)
+        tgroup += title_colspec
+        for _ in headers:
+            colspec = nodes.colspec(colwidth=1)
+            tgroup += colspec
         tgroup += tbody
         result_table += tgroup
         for req_info in app.builder.env.req_all_reqs:
@@ -95,6 +109,10 @@ def process_req_table_nodes(app, doctree, fromdocname):
             entry = nodes.entry()
             entry += nodes.paragraph(text=req_info["title"])
             row += entry
+            for header in headers:
+                entry = nodes.entry()
+                entry += nodes.paragraph(text=req_info["attributes"][header])
+                row += entry
             tbody += row
         node.replace_self(result_table)
 
