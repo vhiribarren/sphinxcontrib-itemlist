@@ -145,19 +145,24 @@ def process_req_table_nodes(app, doctree, fromdocname):
             entry = nodes.entry()
             entry += nodes.paragraph(text=header)
             thead_row += entry
+        result_table += tgroup
         tgroup += thead
         tgroup += tbody
-        result_table += tgroup
         for req_info in app.builder.env.req_all_reqs:
             row = nodes.row()
             entry = nodes.entry()
-            entry += nodes.paragraph(text=req_info["title"])
+            para = nodes.paragraph()
+            refnode = nodes.reference()
+            refnode["refid"] = req_info["target"]["refid"]
+            refnode += nodes.Text(req_info["title"], req_info["title"])
+            tbody += row
             row += entry
+            entry += para
+            para += refnode
             for header in headers:
                 entry = nodes.entry()
                 entry += nodes.paragraph(text=req_info["attributes"][header])
                 row += entry
-            tbody += row
         node.replace_self(result_table)
 
 
