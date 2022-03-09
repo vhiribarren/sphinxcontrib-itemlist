@@ -111,8 +111,13 @@ def process_req_list_nodes(app, doctree, fromdocname):
     for node in doctree.traverse(req_list):
         result_list = nodes.enumerated_list() if node["numbered"] else nodes.bullet_list()
         for req_info in app.builder.env.req_all_reqs:
+            refnode = nodes.reference()
+            refnode["refid"] = req_info["target"]["refid"]
             item = nodes.list_item()
-            item += nodes.paragraph(text=req_info["title"])
+            para = nodes.paragraph()
+            refnode += nodes.Text(req_info["title"], req_info["title"])
+            para += refnode
+            item += para
             result_list += item
         node.replace_self(result_list)
 
