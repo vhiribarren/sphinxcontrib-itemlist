@@ -41,3 +41,9 @@ Demo
     :Important: yes
     :Rational:
         A long rational to explain why we need that.
+
+.. req:: With a missing reference attribute
+
+    :Important: yes
+    :Rational:
+        A long rational to explain why we need that.

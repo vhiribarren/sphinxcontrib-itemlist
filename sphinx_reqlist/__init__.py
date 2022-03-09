@@ -165,7 +165,7 @@ def process_req_table_nodes(app, doctree, fromdocname):
                     row += entry
                     continue
                 entry = nodes.entry()
-                entry += nodes.paragraph(text=req_info["attributes"][header])
+                entry += nodes.paragraph(text=req_info["attributes"].get(header, ""))
                 row += entry
         node.replace_self(result_table)
 
