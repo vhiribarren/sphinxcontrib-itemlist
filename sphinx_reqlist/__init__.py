@@ -51,13 +51,19 @@ class ReqTableDirective(Directive):
     has_content = True
     option_spec = {
         'headers': directives.unchanged_required,
+        'desc_name': directives.unchanged_required,
     }
-
     def run(self):
+        desc_name = self.options["desc_name"] if "desc_name" in self.options else "Title"
         headers = []
         if "headers" in self.options:
             headers = [ h.strip() for h in self.options.get('headers').split(',')]
-        options = {"headers": headers}
+        if desc_name not in headers:
+            headers.insert(0, desc_name)
+        options = {
+            "headers": headers,
+            "desc_name": desc_name
+        }
         return [req_table(req_table_options=options)]
 
 
@@ -128,17 +134,13 @@ def process_req_table_nodes(app, doctree, fromdocname):
 
     for node in doctree.traverse(req_table):
         headers = node["req_table_options"]["headers"]
+        desc_name = node["req_table_options"]["desc_name"]
         result_table = nodes.table()
         tgroup = nodes.tgroup()
         thead = nodes.thead()
         thead_row = nodes.row()
         thead += thead_row
         tbody = nodes.tbody()
-        title_colspec = nodes.colspec(colwidth=2)
-        tgroup += title_colspec
-        entry_title = nodes.entry()
-        entry_title += nodes.paragraph(text="Title")
-        thead_row += entry_title
         for header in headers:
             colspec = nodes.colspec(colwidth=1)
             tgroup += colspec
@@ -150,16 +152,18 @@ def process_req_table_nodes(app, doctree, fromdocname):
         tgroup += tbody
         for req_info in app.builder.env.req_all_reqs:
             row = nodes.row()
-            entry = nodes.entry()
-            para = nodes.paragraph()
-            refnode = nodes.reference()
-            refnode["refid"] = req_info["target"]["refid"]
-            refnode += nodes.Text(req_info["title"], req_info["title"])
             tbody += row
-            row += entry
-            entry += para
-            para += refnode
             for header in headers:
+                if header == desc_name:
+                    entry = nodes.entry()
+                    para = nodes.paragraph()
+                    refnode = nodes.reference()
+                    refnode["refid"] = req_info["target"]["refid"]
+                    refnode += nodes.Text(req_info["title"], req_info["title"])
+                    entry += para
+                    para += refnode
+                    row += entry
+                    continue
                 entry = nodes.entry()
                 entry += nodes.paragraph(text=req_info["attributes"][header])
                 row += entry

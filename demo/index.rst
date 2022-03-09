@@ -5,6 +5,7 @@ Demo
     :numbered:
 
 .. req_table::
+    :desc_name: Description
     :headers: Important, Reference
 
 .. req:: This is a short requirement
