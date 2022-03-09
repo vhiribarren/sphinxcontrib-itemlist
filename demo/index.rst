@@ -2,11 +2,16 @@ Demo
 ====
 
 .. req_list::
+
+.. req_list::
     :numbered:
 
 .. req_table::
-    :desc_name: Description
     :headers: Important, Reference
+
+.. req_table::
+    :desc_name: Description
+    :headers: Reference, Description
 
 .. req:: This is a short requirement
 
