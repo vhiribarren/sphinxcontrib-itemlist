@@ -33,8 +33,14 @@ class req_list(nodes.General, nodes.Element):
 
 
 class ReqListDirective(Directive):
+    has_content = True
+    option_spec = {
+        'numbered': directives.flag,
+    }
     def run(self):
-        return [req_list('')]
+        req_list_node = req_list()
+        req_list_node["numbered"] = "numbered" in self.options
+        return [req_list_node]
 
 
 class req_table(nodes.General, nodes.Element):
@@ -103,7 +109,7 @@ def process_req_list_nodes(app, doctree, fromdocname):
     if not hasattr(app.builder.env, 'req_all_reqs'):
         return
     for node in doctree.traverse(req_list):
-        result_list = nodes.bullet_list()
+        result_list = nodes.enumerated_list() if node["numbered"] else nodes.bullet_list()
         for req_info in app.builder.env.req_all_reqs:
             item = nodes.list_item()
             item += nodes.paragraph(text=req_info["title"])

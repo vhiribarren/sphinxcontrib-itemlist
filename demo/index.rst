@@ -2,6 +2,7 @@ Demo
 ====
 
 .. req_list::
+    :numbered:
 
 .. req_table::
     :headers: Important, Reference
