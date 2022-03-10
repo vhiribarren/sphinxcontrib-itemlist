@@ -28,26 +28,23 @@ from sphinx.util.docutils import SphinxDirective
 from sphinx import addnodes
 
 
-class req_list(nodes.General, nodes.Element):
+class item_list(nodes.General, nodes.Element):
     pass
 
+class item_table(nodes.General, nodes.Element):
+    pass
 
-class ReqListDirective(Directive):
+class ItemListDirective(Directive):
     has_content = True
     option_spec = {
         'numbered': directives.flag,
     }
     def run(self):
-        req_list_node = req_list()
-        req_list_node["numbered"] = "numbered" in self.options
-        return [req_list_node]
+        item_list_node = item_list()
+        item_list_node["numbered"] = "numbered" in self.options
+        return [item_list_node]
 
-
-class req_table(nodes.General, nodes.Element):
-    pass
-
-
-class ReqTableDirective(Directive):
+class ItemTableDirective(Directive):
     has_content = True
     option_spec = {
         'headers': directives.unchanged_required,
@@ -64,10 +61,10 @@ class ReqTableDirective(Directive):
             "headers": headers,
             "desc_name": desc_name
         }
-        return [req_table(req_table_options=options)]
+        return [item_table(item_table_options=options)]
 
 
-class ReqDirective(SphinxDirective):
+class ItemDirective(SphinxDirective):
     has_content = True
     required_arguments = 1
     final_argument_whitespace = True
@@ -76,27 +73,27 @@ class ReqDirective(SphinxDirective):
 
         title = self.arguments[0]
 
-        target_id = f"req-{self.env.new_serialno('req')}"
+        target_id = f"item-{self.env.new_serialno('item')}"
         target_node = nodes.target('', '', ids=[target_id])
 
-        req_desc_signature = addnodes.desc_signature()
-        req_desc_signature += addnodes.desc_name(text=title)
-        req_desc_content = addnodes.desc_content()
-        self.state.nested_parse(self.content, self.content_offset, req_desc_content)
-        req_desc = addnodes.desc()
-        req_desc['classes'].append('describe')
-        req_desc += req_desc_signature
-        req_desc += req_desc_content
+        item_desc_signature = addnodes.desc_signature()
+        item_desc_signature += addnodes.desc_name(text=title)
+        item_desc_content = addnodes.desc_content()
+        self.state.nested_parse(self.content, self.content_offset, item_desc_content)
+        item_desc = addnodes.desc()
+        item_desc['classes'].append('describe')
+        item_desc += item_desc_signature
+        item_desc += item_desc_content
 
-        if not hasattr(self.env, 'req_all_reqs'):
-            self.env.req_all_reqs = []
-        self.env.req_all_reqs.append({
+        if not hasattr(self.env, 'items_all_items'):
+            self.env.items_all_items = []
+        self.env.items_all_items.append({
             "title": title,
-            "attributes": self.extract_attributes(req_desc_content),
+            "attributes": self.extract_attributes(item_desc_content),
             "target": target_node
         })
 
-        return [target_node, req_desc]
+        return [target_node, item_desc]
 
     def extract_attributes(self, desc_content: addnodes.desc_content) -> Dict[str, str]:
         attributes: Dict[str, str] = {}
@@ -111,30 +108,30 @@ class ReqDirective(SphinxDirective):
         return attributes
 
 
-def process_req_list_nodes(app, doctree, fromdocname):
-    if not hasattr(app.builder.env, 'req_all_reqs'):
+def process_item_list_nodes(app, doctree, fromdocname):
+    if not hasattr(app.builder.env, 'items_all_items'):
         return
-    for node in doctree.traverse(req_list):
+    for node in doctree.traverse(item_list):
         result_list = nodes.enumerated_list() if node["numbered"] else nodes.bullet_list()
-        for req_info in app.builder.env.req_all_reqs:
+        for item_info in app.builder.env.items_all_items:
             refnode = nodes.reference()
-            refnode["refid"] = req_info["target"]["refid"]
-            item = nodes.list_item()
+            refnode["refid"] = item_info["target"]["refid"]
+            list_item = nodes.list_item()
             para = nodes.paragraph()
-            refnode += nodes.Text(req_info["title"], req_info["title"])
+            refnode += nodes.Text(item_info["title"], item_info["title"])
             para += refnode
-            item += para
-            result_list += item
+            list_item += para
+            result_list += list_item
         node.replace_self(result_list)
 
 
-def process_req_table_nodes(app, doctree, fromdocname):
-    if not hasattr(app.builder.env, 'req_all_reqs'):
+def process_item_table_nodes(app, doctree, fromdocname):
+    if not hasattr(app.builder.env, 'items_all_items'):
         return
 
-    for node in doctree.traverse(req_table):
-        headers = node["req_table_options"]["headers"]
-        desc_name = node["req_table_options"]["desc_name"]
+    for node in doctree.traverse(item_table):
+        headers = node["item_table_options"]["headers"]
+        desc_name = node["item_table_options"]["desc_name"]
         result_table = nodes.table()
         tgroup = nodes.tgroup()
         thead = nodes.thead()
@@ -150,7 +147,7 @@ def process_req_table_nodes(app, doctree, fromdocname):
         result_table += tgroup
         tgroup += thead
         tgroup += tbody
-        for req_info in app.builder.env.req_all_reqs:
+        for item_info in app.builder.env.items_all_items:
             row = nodes.row()
             tbody += row
             for header in headers:
@@ -158,26 +155,26 @@ def process_req_table_nodes(app, doctree, fromdocname):
                     entry = nodes.entry()
                     para = nodes.paragraph()
                     refnode = nodes.reference()
-                    refnode["refid"] = req_info["target"]["refid"]
-                    refnode += nodes.Text(req_info["title"], req_info["title"])
+                    refnode["refid"] = item_info["target"]["refid"]
+                    refnode += nodes.Text(item_info["title"], item_info["title"])
                     entry += para
                     para += refnode
                     row += entry
                     continue
                 entry = nodes.entry()
-                entry += nodes.paragraph(text=req_info["attributes"].get(header, ""))
+                entry += nodes.paragraph(text=item_info["attributes"].get(header, ""))
                 row += entry
         node.replace_self(result_table)
 
 
 def setup(app):
-    app.add_directive('req', ReqDirective)
-    app.add_directive('req_list', ReqListDirective)
-    app.add_directive('req_table', ReqTableDirective)
-    app.add_node(req_list)
-    app.add_node(req_table)
-    app.connect('doctree-resolved', process_req_list_nodes)
-    app.connect('doctree-resolved', process_req_table_nodes)
+    app.add_directive('item', ItemDirective)
+    app.add_directive('item_list', ItemListDirective)
+    app.add_directive('item_table', ItemTableDirective)
+    app.add_node(item_list)
+    app.add_node(item_table)
+    app.connect('doctree-resolved', process_item_list_nodes)
+    app.connect('doctree-resolved', process_item_table_nodes)
     return {
         'version': '0.1',
         'parallel_read_safe': True,

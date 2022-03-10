@@ -1,19 +1,19 @@
 Demo
 ====
 
-.. req_list::
+.. item_list::
 
-.. req_list::
+.. item_list::
     :numbered:
 
-.. req_table::
+.. item_table::
     :headers: Important, Reference
 
-.. req_table::
+.. item_table::
     :desc_name: Description
     :headers: Reference, Description
 
-.. req:: This is a short requirement
+.. item:: This is a short requirement
 
     This is a short description.
 
@@ -23,7 +23,7 @@ Demo
         A long rational to explain why we need that.
 
 
-.. req:: Here is another requirement
+.. item:: Here is another requirement
 
     This is a short description.
 
@@ -33,7 +33,7 @@ Demo
         A long rational to explain why we need that.
 
 
-.. req:: Why note a third one?
+.. item:: Why note a third one?
 
     This is a short description.
 
@@ -42,7 +42,7 @@ Demo
     :Rational:
         A long rational to explain why we need that.
 
-.. req:: With a missing reference attribute
+.. item:: With a missing reference attribute
 
     :Important: yes
     :Rational:
