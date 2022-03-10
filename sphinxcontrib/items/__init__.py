@@ -34,17 +34,17 @@ class item_list(nodes.General, nodes.Element):
 class item_table(nodes.General, nodes.Element):
     pass
 
-class ItemListDirective(SphinxDirective):
+class ItemListDirective(Directive):
     has_content = True
     option_spec = {
         'numbered': directives.flag,
     }
     def run(self):
-        item_list_node = item_list(docname=self.env.docname)
+        item_list_node = item_list()
         item_list_node["numbered"] = "numbered" in self.options
         return [item_list_node]
 
-class ItemTableDirective(SphinxDirective):
+class ItemTableDirective(Directive):
     has_content = True
     option_spec = {
         'headers': directives.unchanged_required,
@@ -61,7 +61,7 @@ class ItemTableDirective(SphinxDirective):
             "headers": headers,
             "desc_name": desc_name
         }
-        return [item_table(item_table_options=options, docname=self.env.docname)]
+        return [item_table(item_table_options=options)]
 
 
 class ItemDirective(SphinxDirective):
@@ -109,12 +109,12 @@ class ItemDirective(SphinxDirective):
         return attributes
 
 
-def process_item_list_nodes(app, doctree, fromdocname):
+def process_item_list_nodes(app, doctree, from_docname):
     if not hasattr(app.builder.env, 'items_all_items'):
         return
     for node in doctree.traverse(item_list):
         result_list = nodes.enumerated_list() if node["numbered"] else nodes.bullet_list()
-        docname_items = [item_info for item_info in app.builder.env.items_all_items if node["docname"] == item_info["docname"]]
+        docname_items = [item_info for item_info in app.builder.env.items_all_items if from_docname == item_info["docname"]]
         for item_info in docname_items:
             refnode = nodes.reference()
             refnode["refid"] = item_info["target"]["refid"]
@@ -127,11 +127,11 @@ def process_item_list_nodes(app, doctree, fromdocname):
         node.replace_self(result_list)
 
 
-def process_item_table_nodes(app, doctree, fromdocname):
+def process_item_table_nodes(app, doctree, from_docname):
     if not hasattr(app.builder.env, 'items_all_items'):
         return
     for node in doctree.traverse(item_table):
-        docname_items = [item_info for item_info in app.builder.env.items_all_items if node["docname"] == item_info["docname"]]
+        docname_items = [item_info for item_info in app.builder.env.items_all_items if from_docname == item_info["docname"]]
         if len(docname_items) == 0:
             node.replace_self(nodes.paragraph())
             continue
