@@ -72,6 +72,7 @@ class ItemDirective(SphinxDirective):
     def run(self) -> Sequence[Node]:
 
         title = self.arguments[0]
+        docname = self.env.docname
 
         target_id = f"item-{self.env.new_serialno('item')}"
         target_node = nodes.target('', '', ids=[target_id])
@@ -86,8 +87,10 @@ class ItemDirective(SphinxDirective):
         item_desc += item_desc_content
 
         if not hasattr(self.env, 'items_all_items'):
-            self.env.items_all_items = []
-        self.env.items_all_items.append({
+            self.env.items_all_items = {}
+        if not docname in self.env.items_all_items:
+            self.env.items_all_items[docname] = []
+        self.env.items_all_items[docname].append({
             "title": title,
             "docname": self.env.docname,
             "attributes": self.extract_attributes(item_desc_content),
@@ -110,12 +113,12 @@ class ItemDirective(SphinxDirective):
 
 
 def process_item_list_nodes(app, doctree, from_docname):
-    if not hasattr(app.builder.env, 'items_all_items'):
-        return
     for node in doctree.traverse(item_list):
+        if not from_docname in app.builder.env.items_all_items:
+            node.replace_self(nodes.paragraph())
+            continue
         result_list = nodes.enumerated_list() if node["numbered"] else nodes.bullet_list()
-        docname_items = [item_info for item_info in app.builder.env.items_all_items if from_docname == item_info["docname"]]
-        for item_info in docname_items:
+        for item_info in app.builder.env.items_all_items[from_docname]:
             refnode = nodes.reference()
             refnode["refid"] = item_info["target"]["refid"]
             list_item = nodes.list_item()
@@ -128,13 +131,11 @@ def process_item_list_nodes(app, doctree, from_docname):
 
 
 def process_item_table_nodes(app, doctree, from_docname):
-    if not hasattr(app.builder.env, 'items_all_items'):
-        return
     for node in doctree.traverse(item_table):
-        docname_items = [item_info for item_info in app.builder.env.items_all_items if from_docname == item_info["docname"]]
-        if len(docname_items) == 0:
+        if not from_docname in app.builder.env.items_all_items:
             node.replace_self(nodes.paragraph())
             continue
+        docname_items = app.builder.env.items_all_items[from_docname]
         headers = node["item_table_options"]["headers"]
         desc_name = node["item_table_options"]["desc_name"]
         result_table = nodes.table()
