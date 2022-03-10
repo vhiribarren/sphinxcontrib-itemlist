@@ -34,17 +34,17 @@ class item_list(nodes.General, nodes.Element):
 class item_table(nodes.General, nodes.Element):
     pass
 
-class ItemListDirective(Directive):
+class ItemListDirective(SphinxDirective):
     has_content = True
     option_spec = {
         'numbered': directives.flag,
     }
     def run(self):
-        item_list_node = item_list()
+        item_list_node = item_list(docname=self.env.docname)
         item_list_node["numbered"] = "numbered" in self.options
         return [item_list_node]
 
-class ItemTableDirective(Directive):
+class ItemTableDirective(SphinxDirective):
     has_content = True
     option_spec = {
         'headers': directives.unchanged_required,
@@ -61,7 +61,7 @@ class ItemTableDirective(Directive):
             "headers": headers,
             "desc_name": desc_name
         }
-        return [item_table(item_table_options=options)]
+        return [item_table(item_table_options=options, docname=self.env.docname)]
 
 
 class ItemDirective(SphinxDirective):
@@ -89,6 +89,7 @@ class ItemDirective(SphinxDirective):
             self.env.items_all_items = []
         self.env.items_all_items.append({
             "title": title,
+            "docname": self.env.docname,
             "attributes": self.extract_attributes(item_desc_content),
             "target": target_node
         })
@@ -113,7 +114,8 @@ def process_item_list_nodes(app, doctree, fromdocname):
         return
     for node in doctree.traverse(item_list):
         result_list = nodes.enumerated_list() if node["numbered"] else nodes.bullet_list()
-        for item_info in app.builder.env.items_all_items:
+        docname_items = [item_info for item_info in app.builder.env.items_all_items if node["docname"] == item_info["docname"]]
+        for item_info in docname_items:
             refnode = nodes.reference()
             refnode["refid"] = item_info["target"]["refid"]
             list_item = nodes.list_item()
@@ -128,8 +130,11 @@ def process_item_list_nodes(app, doctree, fromdocname):
 def process_item_table_nodes(app, doctree, fromdocname):
     if not hasattr(app.builder.env, 'items_all_items'):
         return
-
     for node in doctree.traverse(item_table):
+        docname_items = [item_info for item_info in app.builder.env.items_all_items if node["docname"] == item_info["docname"]]
+        if len(docname_items) == 0:
+            node.replace_self(nodes.paragraph())
+            continue
         headers = node["item_table_options"]["headers"]
         desc_name = node["item_table_options"]["desc_name"]
         result_table = nodes.table()
@@ -147,7 +152,7 @@ def process_item_table_nodes(app, doctree, fromdocname):
         result_table += tgroup
         tgroup += thead
         tgroup += tbody
-        for item_info in app.builder.env.items_all_items:
+        for item_info in docname_items:
             row = nodes.row()
             tbody += row
             for header in headers:
