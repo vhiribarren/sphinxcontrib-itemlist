@@ -173,6 +173,13 @@ def process_item_table_nodes(app, doctree, from_docname):
         node.replace_self(result_table)
 
 
+def purge_items(app, env, docname):
+    if not hasattr(env, 'items_all_items'):
+        return
+    if docname in env.items_all_items:
+        del env.items_all_items[docname]
+
+
 def setup(app):
     app.add_directive('item', ItemDirective)
     app.add_directive('item_list', ItemListDirective)
@@ -181,6 +188,7 @@ def setup(app):
     app.add_node(item_table)
     app.connect('doctree-resolved', process_item_list_nodes)
     app.connect('doctree-resolved', process_item_table_nodes)
+    app.connect('env-purge-doc', purge_items)
     return {
         'version': '0.1',
         'parallel_read_safe': True,
