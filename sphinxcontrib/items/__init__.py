@@ -180,6 +180,15 @@ def purge_items(app, env, docname):
         del env.items_all_items[docname]
 
 
+def merge_items(app, env, docnames, other):
+    if not hasattr(env, 'items_all_items'):
+        env.items_all_items = {}
+    if not hasattr(other, 'items_all_items'):
+        return
+    for docname in docnames:
+        if docname in other.items_all_items:
+            env.items_all_items[docname].extend(other.items_all_items[docname])
+
 def setup(app):
     app.add_directive('item', ItemDirective)
     app.add_directive('item_list', ItemListDirective)
@@ -189,6 +198,7 @@ def setup(app):
     app.connect('doctree-resolved', process_item_list_nodes)
     app.connect('doctree-resolved', process_item_table_nodes)
     app.connect('env-purge-doc', purge_items)
+    app.connect('env-merge-info', merge_items)
     return {
         'version': '0.1',
         'parallel_read_safe': True,
