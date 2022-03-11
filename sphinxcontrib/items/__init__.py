@@ -99,16 +99,16 @@ class ItemDirective(SphinxDirective):
 
         return [target_node, item_desc]
 
-    def extract_attributes(self, desc_content: addnodes.desc_content) -> Dict[str, str]:
-        attributes: Dict[str, str] = {}
+    def extract_attributes(self, desc_content: addnodes.desc_content) -> Dict[str, nodes.Node]:
+        attributes: Dict[str, nodes.Node] = {}
         for node in desc_content:
             if not isinstance(node, nodes.field_list):
                 continue
             fields = cast(List[nodes.field], node)
             for field in fields:
                 field_name = cast(nodes.field_name, field[0]).astext().strip()
-                field_body = cast(nodes.field_body, field[1]).astext().strip()
-                attributes[field_name] = field_body
+                field_body = field[1]
+                attributes[field_name] = field_body[0]
         return attributes
 
 
@@ -168,7 +168,7 @@ def process_item_table_nodes(app, doctree, from_docname):
                     row += entry
                     continue
                 entry = nodes.entry()
-                entry += nodes.paragraph(text=item_info["attributes"].get(header, ""))
+                entry += item_info["attributes"].get(header, nodes.paragraph())
                 row += entry
         node.replace_self(result_table)
 
