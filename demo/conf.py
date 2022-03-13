@@ -6,7 +6,7 @@ project = 'demo'
 copyright = '2022, Vincent Hiribarren'
 author = 'Vincent Hiribarren'
 
-extensions = [ "sphinxcontrib.items" ]
+extensions = [ "sphinxcontrib.itemlist" ]
 
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
