@@ -22,6 +22,7 @@
 
 from docutils import nodes
 from docutils.nodes import Node
+from docutils.transforms import Transform
 from docutils.parsers.rst import Directive, directives
 from typing import Sequence, cast, List, Dict
 from sphinx.util.docutils import SphinxDirective
@@ -47,10 +48,12 @@ class ItemListDirective(Directive):
     }
 
     def run(self):
-        item_list_node = item_list()
-        item_list_node["numbered"] = "numbered" in self.options
-        item_list_node["local"] = "local" in self.options
-        return [item_list_node]
+        pending = nodes.pending(ItemListNodeTransform)
+        pending["numbered"] = "numbered" in self.options
+        pending["local"] = "local" in self.options
+        document = self.state_machine.document
+        document.note_pending(pending)
+        return [pending]
 
 
 class ItemTableDirective(Directive):
@@ -192,24 +195,27 @@ def gather_item_infos(root_node: Node):
     return item_infos
 
 
-def process_item_list_nodes(app, doctree, docname):
-    for item_list_node in doctree.traverse(item_list):
-        scope_node = item_list_node.parent if item_list_node["local"] else doctree
-        item_infos = gather_item_infos(scope_node)
-        if len(item_infos) == 0:
-            item_list_node.parent.remove(item_list_node)
-            continue
-        result_list = nodes.enumerated_list() if item_list_node["numbered"] else nodes.bullet_list()
-        for item_info in item_infos:
-            refnode = nodes.reference()
-            refnode["refid"] = item_info["target"]["refid"]
-            list_item = nodes.list_item()
-            para = nodes.paragraph()
-            refnode += nodes.Text(item_info["title"], item_info["title"])
-            para += refnode
-            list_item += para
-            result_list += list_item
-        item_list_node.replace_self(result_list)
+class ItemListNodeTransform(Transform):
+    default_priority = 999
+
+    def apply(self) -> None:
+       item_list_node = self.startnode
+       scope_node = item_list_node.parent if item_list_node["local"] else self.document
+       item_infos = gather_item_infos(scope_node)
+       if len(item_infos) == 0:
+           item_list_node.parent.remove(item_list_node)
+           return
+       result_list = nodes.enumerated_list() if item_list_node["numbered"] else nodes.bullet_list()
+       for item_info in item_infos:
+           refnode = nodes.reference()
+           refnode["refid"] = item_info["target"]["refid"]
+           list_item = nodes.list_item()
+           para = nodes.paragraph()
+           refnode += nodes.Text(item_info["title"], item_info["title"])
+           para += refnode
+           list_item += para
+           result_list += list_item
+       item_list_node.replace_self(result_list)
 
 
 def process_item_table_nodes(app, doctree, docname):
@@ -263,7 +269,6 @@ def setup(app):
     app.add_directive('item_default_fields', ItemDefaultFieldsDirective)
     app.add_node(item_list)
     app.add_node(item_table)
-    app.connect('doctree-resolved', process_item_list_nodes)
     app.connect('doctree-resolved', process_item_table_nodes)
     return {
         'version': '0.1',
