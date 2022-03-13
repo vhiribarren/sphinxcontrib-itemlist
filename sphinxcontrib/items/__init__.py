@@ -74,26 +74,35 @@ class ItemTableDirective(Directive):
 
 class ItemDefaultFieldsDirective(SphinxDirective):
     has_content = True
+    option_spec = {
+        'hidden': directives.flag,
+    }
 
     def run(self) -> Sequence[Node]:
 
+        hidden = 'hidden' in self.options
         content_node = nodes.paragraph()
         self.state.nested_parse(self.content, self.content_offset, content_node)
+        if not hasattr(self.env, "items_default_fields"):
+            self.env.items_default_fields = {}
         for candidate_node in content_node:
-            if not isinstance(candidate_node, nodes.field_list):
-                continue
-            break
+            if isinstance(candidate_node, nodes.field_list):
+                break
         else:
-            self.env.items_default_fields[self.env.docname] = {}
+            self.env.items_default_fields[self.env.docname] = {
+                "hidden": False,
+                "attributes": {},
+            }
             return []
         attributes = {}
         for field in candidate_node:
             field_name = cast(nodes.field_name, field[0]).astext().strip()
             field_body = field[1]
             attributes[field_name] = field_body[0]
-        if not hasattr(self.env, "items_default_fields"):
-            self.env.items_default_fields = {}
-        self.env.items_default_fields[self.env.docname] = attributes
+        self.env.items_default_fields[self.env.docname] = {
+            "hidden": hidden,
+            "attributes": attributes,
+        }
         return []
 
 
@@ -121,7 +130,23 @@ class ItemDirective(SphinxDirective):
 
         attributes = {}
         if hasattr(self.env, "items_default_fields"):
-            attributes = self.env.items_default_fields.get(self.env.docname, {}).copy()
+            defaults = self.env.items_default_fields.get(self.env.docname, {"attributes": {}, "hidden": False})
+            attributes = defaults["attributes"].copy()
+            if not defaults["hidden"]:
+                for node in item_desc_content:
+                    if isinstance(node, nodes.field_list):
+                        for attribute in attributes:
+                            for check_field in node:
+                                if check_field[0][0].rawsource == attribute:
+                                    break
+                            else:
+                                field = nodes.field()
+                                field_name = nodes.field_name(text=attribute)
+                                field_body = nodes.field_body()
+                                field_body += attributes[attribute]
+                                node += field
+                                field += field_name
+                                field += field_body
         attributes.update(self.extract_attributes(item_desc_content))
         item_desc['item_info'] = {
             "title": title,

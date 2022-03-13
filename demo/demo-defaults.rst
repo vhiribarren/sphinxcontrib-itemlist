@@ -24,3 +24,12 @@ Remove default fields...
 .. item_default_fields::
 
 .. item:: No fields
+
+Here, default attribute is hidden.
+
+.. item_default_fields::
+    :hidden:
+
+    :Test: bouh
+
+.. item:: With hidden field
