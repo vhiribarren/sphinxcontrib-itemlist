@@ -28,8 +28,12 @@ from sphinx.util.docutils import SphinxDirective
 from sphinx import addnodes
 
 
-class item_list(nodes.General, nodes.Element): pass
-class item_table(nodes.General, nodes.Element): pass
+class item_list(nodes.General, nodes.Element):
+    pass
+
+
+class item_table(nodes.General, nodes.Element):
+    pass
 
 
 class ItemListDirective(Directive):
@@ -38,6 +42,7 @@ class ItemListDirective(Directive):
         'numbered': directives.flag,
         'local': directives.flag,
     }
+
     def run(self):
         item_list_node = item_list()
         item_list_node["numbered"] = "numbered" in self.options
@@ -52,11 +57,12 @@ class ItemTableDirective(Directive):
         'desc_name': directives.unchanged_required,
         'local': directives.flag,
     }
+
     def run(self):
         desc_name = self.options["desc_name"] if "desc_name" in self.options else "Title"
         headers = []
         if "headers" in self.options:
-            headers = [ h.strip() for h in self.options.get('headers').split(',')]
+            headers = [h.strip() for h in self.options.get('headers').split(',')]
         if desc_name not in headers:
             headers.insert(0, desc_name)
         item_table_node = item_table()
@@ -79,7 +85,7 @@ class ItemDirective(SphinxDirective):
         target_node = nodes.target('', '', ids=[target_id])
 
         item_desc = addnodes.desc()
-        item_desc['classes'].append('describe')
+        item_desc['classes'].append('describe') # To have "describe" or signature directive-like style
         item_desc['objtype'] = "item"
         item_desc_signature = addnodes.desc_signature()
         item_desc_signature += addnodes.desc_name(text=title)
@@ -88,12 +94,11 @@ class ItemDirective(SphinxDirective):
         item_desc += item_desc_content
         self.state.nested_parse(self.content, self.content_offset, item_desc_content)
 
-        item_info = {
+        item_desc['item_info'] = {
             "title": title,
             "attributes": self.extract_attributes(item_desc_content),
             "target": target_node
         }
-        item_desc['item_info'] = item_info
 
         return [target_node, item_desc]
 
@@ -110,7 +115,7 @@ class ItemDirective(SphinxDirective):
         return attributes
 
 
-def gather_item_infos(root_node):
+def gather_item_infos(root_node: Node):
     item_infos = []
     for candidate_node in root_node.traverse(addnodes.desc):
         if candidate_node.get("objtype", None) == "item":
