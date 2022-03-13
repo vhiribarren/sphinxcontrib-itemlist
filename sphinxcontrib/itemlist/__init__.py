@@ -28,6 +28,9 @@ from sphinx.util.docutils import SphinxDirective
 from sphinx import addnodes
 
 
+DEFAULT_FIELDS_SLOT = "itemlist_default_fields"
+
+
 class item_list(nodes.General, nodes.Element):
     pass
 
@@ -73,11 +76,11 @@ class ItemTableDirective(Directive):
 
 
 class SphinxDirectiveEx(SphinxDirective):
-    def set_default_items_default_fields(self, reset=False):
-        if not hasattr(self.env, "items_default_fields"):
-            self.env.items_default_fields = {}
-        if reset or not self.env.docname in self.env.items_default_fields:
-            self.env.items_default_fields[self.env.docname] = {
+    def set_default_itemlist_slot(self, reset=False):
+        if not hasattr(self.env, DEFAULT_FIELDS_SLOT):
+            setattr(self.env, DEFAULT_FIELDS_SLOT, {})
+        if reset or not self.env.docname in getattr(self.env, DEFAULT_FIELDS_SLOT):
+            getattr(self.env, DEFAULT_FIELDS_SLOT)[self.env.docname] = {
                 "hidden": False,
                 "attributes": {},
             }
@@ -94,7 +97,7 @@ class ItemDefaultFieldsDirective(SphinxDirectiveEx):
         hidden = 'hidden' in self.options
         content_node = nodes.paragraph()
         self.state.nested_parse(self.content, self.content_offset, content_node)
-        self.set_default_items_default_fields(reset=True)
+        self.set_default_itemlist_slot(reset=True)
         for candidate_node in content_node:
             if isinstance(candidate_node, nodes.field_list):
                 break
@@ -105,7 +108,7 @@ class ItemDefaultFieldsDirective(SphinxDirectiveEx):
             field_name = cast(nodes.field_name, field[0]).astext().strip()
             field_body = field[1]
             attributes[field_name] = field_body[0]
-        self.env.items_default_fields[self.env.docname] = {
+        getattr(self.env, DEFAULT_FIELDS_SLOT)[self.env.docname] = {
             "hidden": hidden,
             "attributes": attributes,
         }
@@ -134,8 +137,8 @@ class ItemDirective(SphinxDirectiveEx):
         item_desc += item_desc_content
         self.state.nested_parse(self.content, self.content_offset, item_desc_content)
 
-        self.set_default_items_default_fields()
-        items_defaults_options = self.env.items_default_fields[self.env.docname]
+        self.set_default_itemlist_slot()
+        items_defaults_options = getattr(self.env, DEFAULT_FIELDS_SLOT)[self.env.docname]
         attributes = items_defaults_options["attributes"].copy()
         if not items_defaults_options["hidden"]:
             self.add_default_fields(item_desc_content, attributes)
