@@ -33,3 +33,11 @@ Here, default attribute is hidden.
     :Test: bouh
 
 .. item:: With hidden field
+
+.. item_default_fields::
+
+    :Test: bouh
+
+.. item:: Without hidden field
+
+    :qsdf: qsdf

@@ -152,20 +152,24 @@ class ItemDirective(SphinxDirectiveEx):
         return [target_node, item_desc]
 
     def add_default_fields(self, item_desc_content, attributes):
-        for node in item_desc_content:
-            if isinstance(node, nodes.field_list):
-                for attribute in attributes:
-                    for check_field in node:
-                        if check_field[0][0].rawsource == attribute:
-                            break
-                    else:
-                        field = nodes.field()
-                        field_name = nodes.field_name(text=attribute)
-                        field_body = nodes.field_body()
-                        field_body += attributes[attribute]
-                        node += field
-                        field += field_name
-                        field += field_body
+        for field_list_node in item_desc_content:
+            if isinstance(field_list_node, nodes.field_list):
+               break
+        else:
+            field_list_node = nodes.field_list()
+            item_desc_content += field_list_node
+        for attribute in attributes:
+            for check_field in field_list_node:
+                if check_field[0][0].rawsource == attribute:
+                    break
+            else:
+                field = nodes.field()
+                field_name = nodes.field_name(text=attribute)
+                field_body = nodes.field_body()
+                field_body += attributes[attribute]
+                field_list_node += field
+                field += field_name
+                field += field_body
 
     def extract_attributes(self, desc_content: addnodes.desc_content) -> Dict[str, nodes.Node]:
         attributes: Dict[str, nodes.Node] = {}
