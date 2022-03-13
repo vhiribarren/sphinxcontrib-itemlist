@@ -72,7 +72,18 @@ class ItemTableDirective(Directive):
         return [item_table_node]
 
 
-class ItemDefaultFieldsDirective(SphinxDirective):
+class SphinxDirectiveEx(SphinxDirective):
+    def set_default_items_default_fields(self, reset=False):
+        if not hasattr(self.env, "items_default_fields"):
+            self.env.items_default_fields = {}
+        if reset or not self.env.docname in self.env.items_default_fields:
+            self.env.items_default_fields[self.env.docname] = {
+                "hidden": False,
+                "attributes": {},
+            }
+
+
+class ItemDefaultFieldsDirective(SphinxDirectiveEx):
     has_content = True
     option_spec = {
         'hidden': directives.flag,
@@ -83,16 +94,11 @@ class ItemDefaultFieldsDirective(SphinxDirective):
         hidden = 'hidden' in self.options
         content_node = nodes.paragraph()
         self.state.nested_parse(self.content, self.content_offset, content_node)
-        if not hasattr(self.env, "items_default_fields"):
-            self.env.items_default_fields = {}
+        self.set_default_items_default_fields(reset=True)
         for candidate_node in content_node:
             if isinstance(candidate_node, nodes.field_list):
                 break
         else:
-            self.env.items_default_fields[self.env.docname] = {
-                "hidden": False,
-                "attributes": {},
-            }
             return []
         attributes = {}
         for field in candidate_node:
@@ -106,7 +112,7 @@ class ItemDefaultFieldsDirective(SphinxDirective):
         return []
 
 
-class ItemDirective(SphinxDirective):
+class ItemDirective(SphinxDirectiveEx):
     has_content = True
     required_arguments = 1
     final_argument_whitespace = True
@@ -119,7 +125,7 @@ class ItemDirective(SphinxDirective):
         target_node = nodes.target('', '', ids=[target_id])
 
         item_desc = addnodes.desc()
-        item_desc['classes'].append('describe') # To have "describe" or signature directive-like style
+        item_desc['classes'].append('describe')  # To have "describe" or signature directive-like style
         item_desc['objtype'] = "item"
         item_desc_signature = addnodes.desc_signature()
         item_desc_signature += addnodes.desc_name(text=title)
@@ -128,25 +134,11 @@ class ItemDirective(SphinxDirective):
         item_desc += item_desc_content
         self.state.nested_parse(self.content, self.content_offset, item_desc_content)
 
-        attributes = {}
-        if hasattr(self.env, "items_default_fields"):
-            defaults = self.env.items_default_fields.get(self.env.docname, {"attributes": {}, "hidden": False})
-            attributes = defaults["attributes"].copy()
-            if not defaults["hidden"]:
-                for node in item_desc_content:
-                    if isinstance(node, nodes.field_list):
-                        for attribute in attributes:
-                            for check_field in node:
-                                if check_field[0][0].rawsource == attribute:
-                                    break
-                            else:
-                                field = nodes.field()
-                                field_name = nodes.field_name(text=attribute)
-                                field_body = nodes.field_body()
-                                field_body += attributes[attribute]
-                                node += field
-                                field += field_name
-                                field += field_body
+        self.set_default_items_default_fields()
+        items_defaults_options = self.env.items_default_fields[self.env.docname]
+        attributes = items_defaults_options["attributes"].copy()
+        if not items_defaults_options["hidden"]:
+            self.add_default_fields(item_desc_content, attributes)
         attributes.update(self.extract_attributes(item_desc_content))
         item_desc['item_info'] = {
             "title": title,
@@ -155,6 +147,22 @@ class ItemDirective(SphinxDirective):
         }
 
         return [target_node, item_desc]
+
+    def add_default_fields(self, item_desc_content, attributes):
+        for node in item_desc_content:
+            if isinstance(node, nodes.field_list):
+                for attribute in attributes:
+                    for check_field in node:
+                        if check_field[0][0].rawsource == attribute:
+                            break
+                    else:
+                        field = nodes.field()
+                        field_name = nodes.field_name(text=attribute)
+                        field_body = nodes.field_body()
+                        field_body += attributes[attribute]
+                        node += field
+                        field += field_name
+                        field += field_body
 
     def extract_attributes(self, desc_content: addnodes.desc_content) -> Dict[str, nodes.Node]:
         attributes: Dict[str, nodes.Node] = {}
