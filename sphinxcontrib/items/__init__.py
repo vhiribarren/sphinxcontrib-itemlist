@@ -72,6 +72,31 @@ class ItemTableDirective(Directive):
         return [item_table_node]
 
 
+class ItemDefaultFieldsDirective(SphinxDirective):
+    has_content = True
+
+    def run(self) -> Sequence[Node]:
+
+        content_node = nodes.paragraph()
+        self.state.nested_parse(self.content, self.content_offset, content_node)
+        for candidate_node in content_node:
+            if not isinstance(candidate_node, nodes.field_list):
+                continue
+            break
+        else:
+            self.env.items_default_fields[self.env.docname] = {}
+            return []
+        attributes = {}
+        for field in candidate_node:
+            field_name = cast(nodes.field_name, field[0]).astext().strip()
+            field_body = field[1]
+            attributes[field_name] = field_body[0]
+        if not hasattr(self.env, "items_default_fields"):
+            self.env.items_default_fields = {}
+        self.env.items_default_fields[self.env.docname] = attributes
+        return []
+
+
 class ItemDirective(SphinxDirective):
     has_content = True
     required_arguments = 1
@@ -94,9 +119,13 @@ class ItemDirective(SphinxDirective):
         item_desc += item_desc_content
         self.state.nested_parse(self.content, self.content_offset, item_desc_content)
 
+        attributes = {}
+        if hasattr(self.env, "items_default_fields"):
+            attributes = self.env.items_default_fields.get(self.env.docname, {}).copy()
+        attributes.update(self.extract_attributes(item_desc_content))
         item_desc['item_info'] = {
             "title": title,
-            "attributes": self.extract_attributes(item_desc_content),
+            "attributes": attributes,
             "target": target_node
         }
 
@@ -191,6 +220,7 @@ def setup(app):
     app.add_directive('item', ItemDirective)
     app.add_directive('item_list', ItemListDirective)
     app.add_directive('item_table', ItemTableDirective)
+    app.add_directive('item_default_fields', ItemDefaultFieldsDirective)
     app.add_node(item_list)
     app.add_node(item_table)
     app.connect('doctree-resolved', process_item_list_nodes)

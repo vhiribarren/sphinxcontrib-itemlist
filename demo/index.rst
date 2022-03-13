@@ -5,3 +5,4 @@ Demo
 
     demo-main
     demo-empty
+    demo-defaults
