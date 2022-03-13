@@ -1,5 +1,8 @@
-Page 1
-======
+Demo main
+=========
+
+Global list and tables
+----------------------
 
 .. item_list::
 
@@ -13,11 +16,28 @@ Page 1
     :desc_name: Description
     :headers: Reference, Description
 
+Subsection 1
+------------
+
+.. item_list::
+    :local:
+
+.. item_table::
+    :local:
+
+.. item:: Test
+
+.. item:: Test 2
+
+
+Subsection 2
+------------
+
 .. item:: This is a short requirement
 
     This is a short description.
 
-    :Reference: ID12345
+    :Reference: ``ID12345``
     :Important: yes
     :Rational:
         A long rational to explain why we need that.

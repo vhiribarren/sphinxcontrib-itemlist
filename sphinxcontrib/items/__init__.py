@@ -128,7 +128,7 @@ def process_item_list_nodes(app, doctree, docname):
         scope_node = item_list_node.parent if item_list_node["local"] else doctree
         item_infos = gather_item_infos(scope_node)
         if len(item_infos) == 0:
-            item_list_node.replace_self(nodes.paragraph())
+            item_list_node.parent.remove(item_list_node)
             continue
         result_list = nodes.enumerated_list() if item_list_node["numbered"] else nodes.bullet_list()
         for item_info in item_infos:
@@ -148,7 +148,7 @@ def process_item_table_nodes(app, doctree, docname):
         scope_node = item_table_node.parent if item_table_node["local"] else doctree
         item_infos = gather_item_infos(scope_node)
         if len(item_infos) == 0:
-            item_table_node.replace_self(nodes.paragraph())
+            item_table_node.parent.remove(item_table_node)
             continue
         headers = item_table_node["headers"]
         desc_name = item_table_node["desc_name"]
