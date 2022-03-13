@@ -28,27 +28,29 @@ from sphinx.util.docutils import SphinxDirective
 from sphinx import addnodes
 
 
-class item_list(nodes.General, nodes.Element):
-    pass
+class item_list(nodes.General, nodes.Element): pass
+class item_table(nodes.General, nodes.Element): pass
 
-class item_table(nodes.General, nodes.Element):
-    pass
 
 class ItemListDirective(Directive):
     has_content = True
     option_spec = {
         'numbered': directives.flag,
+        'local': directives.flag,
     }
     def run(self):
         item_list_node = item_list()
         item_list_node["numbered"] = "numbered" in self.options
+        item_list_node["local"] = "local" in self.options
         return [item_list_node]
+
 
 class ItemTableDirective(Directive):
     has_content = True
     option_spec = {
         'headers': directives.unchanged_required,
         'desc_name': directives.unchanged_required,
+        'local': directives.flag,
     }
     def run(self):
         desc_name = self.options["desc_name"] if "desc_name" in self.options else "Title"
@@ -57,11 +59,11 @@ class ItemTableDirective(Directive):
             headers = [ h.strip() for h in self.options.get('headers').split(',')]
         if desc_name not in headers:
             headers.insert(0, desc_name)
-        options = {
-            "headers": headers,
-            "desc_name": desc_name
-        }
-        return [item_table(item_table_options=options)]
+        item_table_node = item_table()
+        item_table_node["desc_name"] = desc_name
+        item_table_node["headers"] = headers
+        item_table_node["local"] = "local" in self.options
+        return [item_table_node]
 
 
 class ItemDirective(SphinxDirective):
@@ -72,30 +74,26 @@ class ItemDirective(SphinxDirective):
     def run(self) -> Sequence[Node]:
 
         title = self.arguments[0]
-        docname = self.env.docname
 
         target_id = f"item-{self.env.new_serialno('item')}"
         target_node = nodes.target('', '', ids=[target_id])
 
+        item_desc = addnodes.desc()
+        item_desc['classes'].append('describe')
+        item_desc['objtype'] = "item"
         item_desc_signature = addnodes.desc_signature()
         item_desc_signature += addnodes.desc_name(text=title)
         item_desc_content = addnodes.desc_content()
-        self.state.nested_parse(self.content, self.content_offset, item_desc_content)
-        item_desc = addnodes.desc()
-        item_desc['classes'].append('describe')
         item_desc += item_desc_signature
         item_desc += item_desc_content
+        self.state.nested_parse(self.content, self.content_offset, item_desc_content)
 
-        if not hasattr(self.env, 'items_all_items'):
-            self.env.items_all_items = {}
-        if not docname in self.env.items_all_items:
-            self.env.items_all_items[docname] = []
-        self.env.items_all_items[docname].append({
+        item_info = {
             "title": title,
-            "docname": self.env.docname,
             "attributes": self.extract_attributes(item_desc_content),
             "target": target_node
-        })
+        }
+        item_desc['item_info'] = item_info
 
         return [target_node, item_desc]
 
@@ -112,13 +110,23 @@ class ItemDirective(SphinxDirective):
         return attributes
 
 
-def process_item_list_nodes(app, doctree, from_docname):
-    for node in doctree.traverse(item_list):
-        if not from_docname in app.builder.env.items_all_items:
-            node.replace_self(nodes.paragraph())
+def gather_item_infos(root_node):
+    item_infos = []
+    for candidate_node in root_node.traverse(addnodes.desc):
+        if candidate_node.get("objtype", None) == "item":
+            item_infos.append(candidate_node["item_info"])
+    return item_infos
+
+
+def process_item_list_nodes(app, doctree, docname):
+    for item_list_node in doctree.traverse(item_list):
+        scope_node = item_list_node.parent if item_list_node["local"] else doctree
+        item_infos = gather_item_infos(scope_node)
+        if len(item_infos) == 0:
+            item_list_node.replace_self(nodes.paragraph())
             continue
-        result_list = nodes.enumerated_list() if node["numbered"] else nodes.bullet_list()
-        for item_info in app.builder.env.items_all_items[from_docname]:
+        result_list = nodes.enumerated_list() if item_list_node["numbered"] else nodes.bullet_list()
+        for item_info in item_infos:
             refnode = nodes.reference()
             refnode["refid"] = item_info["target"]["refid"]
             list_item = nodes.list_item()
@@ -127,17 +135,18 @@ def process_item_list_nodes(app, doctree, from_docname):
             para += refnode
             list_item += para
             result_list += list_item
-        node.replace_self(result_list)
+        item_list_node.replace_self(result_list)
 
 
-def process_item_table_nodes(app, doctree, from_docname):
-    for node in doctree.traverse(item_table):
-        if not from_docname in app.builder.env.items_all_items:
-            node.replace_self(nodes.paragraph())
+def process_item_table_nodes(app, doctree, docname):
+    for item_table_node in doctree.traverse(item_table):
+        scope_node = item_table_node.parent if item_table_node["local"] else doctree
+        item_infos = gather_item_infos(scope_node)
+        if len(item_infos) == 0:
+            item_table_node.replace_self(nodes.paragraph())
             continue
-        docname_items = app.builder.env.items_all_items[from_docname]
-        headers = node["item_table_options"]["headers"]
-        desc_name = node["item_table_options"]["desc_name"]
+        headers = item_table_node["headers"]
+        desc_name = item_table_node["desc_name"]
         result_table = nodes.table()
         tgroup = nodes.tgroup()
         thead = nodes.thead()
@@ -153,7 +162,7 @@ def process_item_table_nodes(app, doctree, from_docname):
         result_table += tgroup
         tgroup += thead
         tgroup += tbody
-        for item_info in docname_items:
+        for item_info in item_infos:
             row = nodes.row()
             tbody += row
             for header in headers:
@@ -170,24 +179,8 @@ def process_item_table_nodes(app, doctree, from_docname):
                 entry = nodes.entry()
                 entry += item_info["attributes"].get(header, nodes.paragraph())
                 row += entry
-        node.replace_self(result_table)
+        item_table_node.replace_self(result_table)
 
-
-def purge_items(app, env, docname):
-    if not hasattr(env, 'items_all_items'):
-        return
-    if docname in env.items_all_items:
-        del env.items_all_items[docname]
-
-
-def merge_items(app, env, docnames, other):
-    if not hasattr(env, 'items_all_items'):
-        env.items_all_items = {}
-    if not hasattr(other, 'items_all_items'):
-        return
-    for docname in docnames:
-        if docname in other.items_all_items:
-            env.items_all_items[docname].extend(other.items_all_items[docname])
 
 def setup(app):
     app.add_directive('item', ItemDirective)
@@ -197,8 +190,6 @@ def setup(app):
     app.add_node(item_table)
     app.connect('doctree-resolved', process_item_list_nodes)
     app.connect('doctree-resolved', process_item_table_nodes)
-    app.connect('env-purge-doc', purge_items)
-    app.connect('env-merge-info', merge_items)
     return {
         'version': '0.1',
         'parallel_read_safe': True,
