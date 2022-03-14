@@ -40,7 +40,7 @@ class item_table(nodes.General, nodes.Element):
     pass
 
 
-class ItemListDirective(Directive):
+class ItemListDirective(SphinxDirective):
     has_content = True
     option_spec = {
         'numbered': directives.flag,
@@ -51,12 +51,13 @@ class ItemListDirective(Directive):
         pending = nodes.pending(ItemListNodeTransform)
         pending["numbered"] = "numbered" in self.options
         pending["local"] = "local" in self.options
+        pending["docname"] = self.env.docname
         document = self.state_machine.document
         document.note_pending(pending)
         return [pending]
 
 
-class ItemTableDirective(Directive):
+class ItemTableDirective(SphinxDirective):
     has_content = True
     option_spec = {
         'headers': directives.unchanged_required,
@@ -75,6 +76,7 @@ class ItemTableDirective(Directive):
         item_table_node["desc_name"] = desc_name
         item_table_node["headers"] = headers
         item_table_node["local"] = "local" in self.options
+        item_table_node["docname"] = self.env.docname
         return [item_table_node]
 
 
@@ -148,6 +150,7 @@ class ItemDirective(SphinxDirectiveEx):
         attributes.update(self.extract_attributes(item_desc_content))
         item_desc['item_info'] = {
             "title": title,
+            "docname": self.env.docname,
             "attributes": attributes,
             "target": target_node
         }
@@ -187,11 +190,12 @@ class ItemDirective(SphinxDirectiveEx):
         return attributes
 
 
-def gather_item_infos(root_node: Node):
+def gather_item_infos(root_node: Node, docname: None):
     item_infos = []
     for candidate_node in root_node.traverse(addnodes.desc):
         if candidate_node.get("objtype", None) == "item":
-            item_infos.append(candidate_node["item_info"])
+            if docname is None or candidate_node["item_info"]["docname"] == docname:
+                item_infos.append(candidate_node["item_info"])
     return item_infos
 
 
@@ -200,8 +204,9 @@ class ItemListNodeTransform(Transform):
 
     def apply(self) -> None:
        item_list_node = self.startnode
+       item_list_docname = item_list_node["docname"]
        scope_node = item_list_node.parent if item_list_node["local"] else self.document
-       item_infos = gather_item_infos(scope_node)
+       item_infos = gather_item_infos(scope_node, item_list_docname)
        if len(item_infos) == 0:
            item_list_node.parent.remove(item_list_node)
            return
@@ -220,8 +225,9 @@ class ItemListNodeTransform(Transform):
 
 def process_item_table_nodes(app, doctree, docname):
     for item_table_node in doctree.traverse(item_table):
+        item_table_docname = item_table_node["docname"]
         scope_node = item_table_node.parent if item_table_node["local"] else doctree
-        item_infos = gather_item_infos(scope_node)
+        item_infos = gather_item_infos(scope_node, item_table_docname)
         if len(item_infos) == 0:
             item_table_node.parent.remove(item_table_node)
             continue
