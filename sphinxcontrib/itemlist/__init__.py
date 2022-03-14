@@ -32,14 +32,6 @@ from sphinx import addnodes
 DEFAULT_FIELDS_SLOT = "itemlist_default_fields"
 
 
-class item_list(nodes.General, nodes.Element):
-    pass
-
-
-class item_table(nodes.General, nodes.Element):
-    pass
-
-
 class ItemListDirective(SphinxDirective):
     has_content = True
     option_spec = {
@@ -72,12 +64,14 @@ class ItemTableDirective(SphinxDirective):
             headers = [h.strip() for h in self.options.get('headers').split(',')]
         if desc_name not in headers:
             headers.insert(0, desc_name)
-        item_table_node = item_table()
-        item_table_node["desc_name"] = desc_name
-        item_table_node["headers"] = headers
-        item_table_node["local"] = "local" in self.options
-        item_table_node["docname"] = self.env.docname
-        return [item_table_node]
+        pending = nodes.pending(ItemTableNodeTransform)
+        pending["desc_name"] = desc_name
+        pending["headers"] = headers
+        pending["local"] = "local" in self.options
+        pending["docname"] = self.env.docname
+        document = self.state_machine.document
+        document.note_pending(pending)
+        return [pending]
 
 
 class SphinxDirectiveEx(SphinxDirective):
@@ -223,14 +217,17 @@ class ItemListNodeTransform(Transform):
        item_list_node.replace_self(result_list)
 
 
-def process_item_table_nodes(app, doctree, docname):
-    for item_table_node in doctree.traverse(item_table):
+class ItemTableNodeTransform(Transform):
+    default_priority = 999
+
+    def apply(self) -> None:
+        item_table_node = self.startnode
         item_table_docname = item_table_node["docname"]
-        scope_node = item_table_node.parent if item_table_node["local"] else doctree
+        scope_node = item_table_node.parent if item_table_node["local"] else self.document
         item_infos = gather_item_infos(scope_node, item_table_docname)
         if len(item_infos) == 0:
             item_table_node.parent.remove(item_table_node)
-            continue
+            return
         headers = item_table_node["headers"]
         desc_name = item_table_node["desc_name"]
         result_table = nodes.table()
@@ -273,9 +270,6 @@ def setup(app):
     app.add_directive('item_list', ItemListDirective)
     app.add_directive('item_table', ItemTableDirective)
     app.add_directive('item_default_fields', ItemDefaultFieldsDirective)
-    app.add_node(item_list)
-    app.add_node(item_table)
-    app.connect('doctree-resolved', process_item_table_nodes)
     return {
         'version': '0.1',
         'parallel_read_safe': True,
