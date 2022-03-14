@@ -20,10 +20,16 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+__project__ =  "sphinxcontrib-itemlist"
+__author__  = "Vincent Hiribarren"
+__license__ = "MIT"
+__version__ = __import__("pkg_resources").require(__project__)[0].version
+
+
 from docutils import nodes
 from docutils.nodes import Node
 from docutils.transforms import Transform
-from docutils.parsers.rst import Directive, directives
+from docutils.parsers.rst import directives
 from typing import Sequence, cast, List, Dict
 from sphinx.util.docutils import SphinxDirective
 from sphinx import addnodes
@@ -271,7 +277,7 @@ def setup(app):
     app.add_directive('item_table', ItemTableDirective)
     app.add_directive('item_default_fields', ItemDefaultFieldsDirective)
     return {
-        'version': '0.1',
+        'version': __version__,
         'parallel_read_safe': True,
         'parallel_write_safe': True,
     }
